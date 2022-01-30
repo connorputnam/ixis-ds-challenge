@@ -1,0 +1,181 @@
+---
+title: "02_visualizations_metrics"
+author: "Connor Putnam"
+date: "1/28/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(lubridate)
+library(readxl)
+library(gridExtra)
+library(RColorBrewer)
+library(ggthemes)
+```
+
+### Loading in Data
+
+```{r}
+### Loading in Data
+cart_dta <- read_csv(here("Data", "DataAnalyst_Ecom_data_addsToCart.csv"))
+counts_dta <- read_csv(here("Data", "DataAnalyst_Ecom_data_sessionCounts.csv"))
+
+### Loading in the sheets created in the combined workbook
+### Although this is only two sheets and mapping throuh them is not really necessary,
+### I wanted to show I know how to use the purrr package
+
+sheet_names <- excel_sheets(here("Data", "reference_tables_prefered.xlsx")) ### saving the sheet names
+reference_dfs <- sheet_names %>%
+  map(function(sheet) {
+    read_xlsx(here("Data", "reference_tables_prefered.xlsx"), sheet = sheet) %>% ### mapping through the sheets
+      as.data.frame()
+  })
+
+first_sheet <- reference_dfs[[1]]
+second_sheet <- reference_dfs[[2]]
+```
+
+### Visuals
+
+#### Visuals for First Sheet
+
+```{r}
+options(scipen = 999)
+
+facet_sessions <- first_sheet %>%
+  mutate_at(vars(month), as.factor) %>%
+  mutate(month_abb = month.abb[month]) %>%
+  ggplot(aes(x = month_abb, y = Sessions, group = dim_deviceCategory)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ dim_deviceCategory) +
+  ggtitle("Total Number of Sessions by Device Type") +
+  theme(axis.text.x = element_text(angle = 45))
+
+facet_transactions <- first_sheet %>%
+  mutate_at(vars(month), as.factor) %>%
+  mutate(month_abb = month.abb[month]) %>%
+  ggplot(aes(x = month_abb, y = Transactions, group = dim_deviceCategory)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ dim_deviceCategory) +
+  ggtitle("Total Number of Transactions by Device Type") +
+  theme(axis.text.x = element_text(angle = 45))
+
+facet_sessions
+facet_transactions
+```
+
+### Seasonality in add to Cart
+
+```{r}
+cart_dta %>%
+  mutate(date = make_date(dim_year, dim_month)) %>%
+  ggplot(aes(x = date, y = addsToCart)) +
+  geom_bar(stat = "identity", fill = "#1B9E77") +
+  theme_minimal() +
+  xlab("Date") +
+  ylab("Amount Added to Cart") +
+  ggtitle("Overall Number of Items in Cart")
+
+#brewer.pal(n = 8, name = "RdBu")
+
+cart_dta %>%
+  mutate(seasons = case_when(dim_month == 12 | dim_month == 1 | dim_month == 2 ~ "Winter",
+                             dim_month == 9 | dim_month == 10 | dim_month == 11 ~ "Fall",
+                             dim_month == 6 | dim_month == 7 | dim_month == 8 ~ "Summer",
+                             dim_month == 3 | dim_month == 4 | dim_month == 5 ~ "Spring", 
+                             TRUE ~ as.character(dim_month))) %>%
+  ggplot(aes(x = seasons, y = addsToCart, fill = seasons)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  xlab("Season") +
+  ylab("Amount Added to Cart") +
+  ggtitle("Overall Number of Items in Cart") +
+  scale_fill_brewer(palette = "Dark2")
+```
+
+
+```{r}
+counts_dta %>%
+  group_by(dim_browser) %>%
+  summarise(sum_sessions = sum(sessions)) %>%
+  ungroup() %>%
+  mutate(percent_sessions = sum_sessions / sum(sum_sessions)) %>%
+  arrange(desc(sum_sessions)) %>%
+  mutate(browser_name = case_when(percent_sessions <= 0.001 ~ "Other",
+                                  TRUE ~ as.character(dim_browser))) %>%
+  select(browser_name, percent_sessions) %>% 
+  mutate(row = row_number()) %>%
+  pivot_wider(names_from = browser_name, values_from = percent_sessions, values_fill = 0) %>%
+  pivot_longer(-row) %>%
+  filter(value != 0)
+
+```
+#1B9E77" "#D95F02" "#7570B3" "#E7298A" "#66A61E" "#E6AB02" "#A6761D" "#666666"
+
+```{r}
+top_browsers <- counts_dta %>%
+  group_by(dim_browser) %>%
+  summarise(sum_sessions = sum(sessions)) %>%
+  arrange(desc(sum_sessions)) %>%
+  group_by(dim_browser = factor(c(dim_browser[1:9], 
+                                     rep("Other", 
+                                     n() - 9)),
+                                     levels = c(dim_browser[1:9], "Other"))) %>%
+  summarise(sum_sessions = sum(sum_sessions)) %>%
+  mutate(percent_sessions = sum_sessions / sum(sum_sessions))
+
+ggplot(top_browsers, aes(dim_browser, sum_sessions)) +
+  geom_bar(stat = "identity", fill = "#7570B3") +
+  coord_flip() +
+  scale_x_discrete(limits = rev) + 
+  theme_minimal() +
+  ggtitle("Most Popular Browser") +
+  ylab("Number if Sessions") +
+  xlab("Browser Name")
+```
+```{r}
+ggplot(counts_dta, aes(sessions, transactions, color = QTY)) +
+  geom_point() +
+  scale_color_distiller(palette = "Oranges", direction = 1) +
+  theme_minimal() +
+  ggtitle("Relationship between Sessions and Transactions") +
+  xlab("Number of Sessions") +
+  ylab("Number of Transactions")
+```
+
+
+### Additional Metrics
+
+
+```{r}
+### Cart Abandonment Rate
+
+car_count <- counts_dta %>% 
+  mutate_at(vars(dim_date), mdy) %>%
+  mutate(month = month(dim_date),
+         year = year(dim_date)) %>% 
+  group_by(year, month) %>%
+  summarise(monthly_transactions = sum(transactions))
+
+car_cart <- cart_dta %>%
+  mutate(date = make_date(dim_year, dim_month)) %>%
+  mutate(month = month(date),
+         year = year(date)) %>% 
+  group_by(year, month)
+
+left_join(car_count, car_cart, by = c("month", "year")) %>%
+  mutate(CAR = monthly_transactions / addsToCart) %>%
+  ggplot(aes(date, CAR)) +
+  geom_line(color = "#D95F02") +
+  theme_minimal() +
+  ylab("Cart Abandonment Rate") +
+  xlab("Date") +
+  ggtitle("Increase in Cart Abandonment Rate")
+```
+
+```{r}
+purl("02_visualizations_metrics.RMD")
+```
