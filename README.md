@@ -7,7 +7,7 @@
 
 The goal of this project is to demonstrate to IXIS how I work as a data analyst/scientist. This will be done by showing aspects of my workflow such as code organization, data wrangling, and data visualizations. 
 
-### Time Taken to Complete the Porject
+### Approximate Time Taken to Complete the Porject
 
 * R Code: `6 hours`
 * Slide Deck: `1.5 hours`
