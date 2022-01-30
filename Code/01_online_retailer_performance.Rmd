@@ -20,8 +20,6 @@ library(lubridate)
 ```{r}
 cart_dta <- read_csv(here("Data", "DataAnalyst_Ecom_data_addsToCart.csv"))
 counts_dta <- read_csv(here("Data", "DataAnalyst_Ecom_data_sessionCounts.csv"))
-
-source(here("Code", "seasons_function.R"))
 ```
 
 ### Create First Sheet
@@ -30,7 +28,7 @@ source(here("Code", "seasons_function.R"))
 first_sheet <- counts_dta %>%
   mutate_at(vars(dim_date), mdy) %>% ### using lubridate to convert to class date 
   mutate(month = month(dim_date)) %>% ### extracting the month
-  group_by(dim_deviceCategory, month) %>% ### assignemnt asks to create a Month 8 Device aggregation
+  group_by(dim_deviceCategory, month) %>% ### assignment asks to create a Month 8 Device aggregation
   summarise(Sessions = sum(sessions),  ### Now time to compute the four desired metrics
             Transactions = sum(transactions),
             QTY = sum(QTY),
@@ -81,16 +79,16 @@ saveWorkbook(wb, file = here("Data", "reference_tables.xlsx"), overwrite = TRUE)
 ```
 
 ```{r}
-### This is personally how I like to do this task.
-### Find it more straight forward than the openxlsx package, and does not contains not dependencies
-writexl::write_xlsx(list(month_device = first_sheet, 
-                         month_over_month = second_sheet), 
-                    here("Data", "reference_tables_prefered.xlsx"))
+### This is how I personally like to do this task.
+### Find it more straight forward than the openxlsx package
+write_xlsx(list(month_device = first_sheet, 
+                month_over_month = second_sheet), 
+                here("Data", "reference_tables_prefered.xlsx"))
 ```
 
 
 ```{r}
-purl("01_online_retailer_performance.RMD")
+purl("01_online_retailer_performance.RMD") ### creates an R script
 ```
 
 DataAnalyst_Ecom_data_addsToCart.csv
