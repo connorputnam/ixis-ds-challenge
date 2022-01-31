@@ -27,9 +27,9 @@ The code for this project is split into two main files which are located in the 
   
   * This file will explore some visuals regarding the various variables, with the goal being to help guide the creation of the slide deck. As visuals are made with color blind friendly palettes and were create to balance both information transfer as well as readability. 
   
-The data needed for this project can be found in the folder labeled `Data`. The `Data` folder contains both `R` scripts as well as `RMarkdown` files, so those who review the code can use which ever one they like.
+The data needed and the data created for this project can be found in the folder labeled `Data`. The `Data` folder contains both `R` scripts as well as `RMarkdown` files, so those who review the code can use which ever one they like.
 
-Any images created for the slide desk as store in the `Results` folder.
+Any images created for the slide desk as store in the `Images and Slides` folder.
 
 The packages needed to run this repo are as follows:
 

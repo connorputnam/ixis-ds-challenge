@@ -67,6 +67,7 @@ second_sheet <- left_join(second_sheet_counts, second_sheet_cart, by = c("month"
   select(-dim_year)
 second_sheet
 ```
+### Write data to .xlsx file
 
 ```{r}
 ### Add to dataframes to workbook via the openxlsx package
